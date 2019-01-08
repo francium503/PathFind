@@ -14,6 +14,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름�
 HWND g_hWnd;
 
 BYTE map[MAP_HEIGHT][MAP_WIDTH];
+mapType drawMode;
 std::priority_queue<st_Node> openList;
 std::priority_queue<st_Node> closeList;
 
@@ -77,6 +78,48 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_MOUSEMOVE:
+		{
+			if(wParam != MK_LBUTTON)
+				return DefWindowProc(hWnd, message, wParam, lParam);
+
+			int xpos = GET_X_LPARAM(lParam) / Length;
+			int ypos = GET_Y_LPARAM(lParam) / Length;
+
+			if (xpos >= MAP_WIDTH)
+				return DefWindowProc(hWnd, message, wParam, lParam);
+			if (xpos < 0)
+				return DefWindowProc(hWnd, message, wParam, lParam);
+
+			if (ypos >= MAP_HEIGHT)
+				return DefWindowProc(hWnd, message, wParam, lParam);
+			if (ypos < 0)
+				return DefWindowProc(hWnd, message, wParam, lParam);
+
+			map[ypos][xpos] = drawMode;
+
+			InvalidateRect(hWnd, NULL, false);
+		}
+
+	case WM_KEYDOWN:
+		{
+			switch (wParam) {
+			case 0x31: // 1key
+				drawMode = none;
+				break;
+
+			case 0x32: // 2key
+				drawMode = water;
+				break;
+
+			case 0x33:  // 3key
+				drawMode = wall;
+				break;
+
+			default:
+				return DefWindowProc(hWnd, message, wParam, lParam);
+			}
+		}
 
     case WM_COMMAND:
         {
@@ -98,16 +141,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
 
-			HPEN oldPen, drawPen;
-
-			drawPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
-
-			oldPen = (HPEN)SelectObject(hdc, drawPen);
 			DrawMap(hdc);
-
-			SelectObject(hdc, oldPen);
-
-			DeleteObject(drawPen);
 
             EndPaint(hWnd, &ps);
         }

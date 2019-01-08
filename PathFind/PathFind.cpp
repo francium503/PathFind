@@ -142,6 +142,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
 
 			DrawMap(hdc);
+			DrawOpenList(hdc);
+			DrawCloseList(hdc);
 
             EndPaint(hWnd, &ps);
         }
@@ -229,5 +231,62 @@ void DrawMap(HDC hDc)
 	DeleteObject(wallB);
 	DeleteObject(startB);
 	DeleteObject(endB);
+}
+
+void DrawOpenList(HDC hDc)
+{
+	HPEN openPen;
+	HBRUSH openB;
+
+	openPen = CreatePen(PS_SOLID, 1, RGB(255, 255, 100));
+	openB = CreateSolidBrush(RGB(255, 255, 100));
+
+	HPEN oldP = (HPEN)SelectObject(hDc, openPen);
+	HBRUSH oldB = (HBRUSH)SelectObject(hDc, openB);
+
+	std::priority_queue<st_Node> tmp = openList;
+
+	for (int i = 0; i < tmp.size(); ++i) {
+		st_Node t = tmp.top();
+
+		Rectangle(hDc, t.point.x * Length, t.point.y*Length, t.point.x*Length + Length, t.point.y*Length + Length);
+
+		tmp.pop();
+	}
+
+	SelectObject(hDc, oldP);
+	SelectObject(hDc, oldB);
+
+	DeleteObject(openPen);
+	DeleteObject(openB);
+}
+
+void DrawCloseList(HDC hDc)
+{
+	HPEN closePen;
+	HBRUSH clodeB;
+
+	closePen = CreatePen(PS_SOLID, 1, RGB(100, 255, 255));
+	clodeB = CreateSolidBrush(RGB(100, 255, 255));
+
+	HPEN oldP = (HPEN)SelectObject(hDc, closePen);
+	HBRUSH oldB = (HBRUSH)SelectObject(hDc, clodeB);
+
+	std::priority_queue<st_Node> tmp = closeList;
+
+	for (int i = 0; i < tmp.size(); ++i) {
+		st_Node t = tmp.top();
+
+		Rectangle(hDc, t.point.x * Length, t.point.y*Length, t.point.x*Length + Length, t.point.y*Length + Length);
+
+		tmp.pop();
+	}
+
+	SelectObject(hDc, oldP);
+	SelectObject(hDc, oldB);
+
+	DeleteObject(closePen);
+	DeleteObject(clodeB);
+
 }
 

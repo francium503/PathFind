@@ -7,6 +7,9 @@
 #define MAP_WIDTH 100
 #define Length 20
 
+#define G_Weight 10
+#define H_Weight 10
+
 enum mapType {
 	none,
 	water,
@@ -28,16 +31,21 @@ struct st_Node {
 	st_Node* pParent = nullptr;
 };
 
-bool operator<(st_Node lValue, st_Node rValue) {
-	return lValue.f > rValue.f;
+bool operator==(st_Point lValue, st_Point rValue) {
+	return (lValue.x == rValue.x) && (lValue.y == rValue.y);
 }
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-BOOL FindPath(st_Point start, st_Point end, st_Point *next);
+BOOL FindPath(st_Point start, st_Point end);
 BOOL NearNodeMake(st_Node* pNode);
-BOOL NodeMake(st_Point* pPoint, st_Node *pParent);
+BOOL NodeMake(st_Point pPoint, st_Node *pParent);
 
 
 void DrawMap(HDC hDc);
 void DrawOpenList(HDC hDc);
 void DrawCloseList(HDC hDc);
+void DrawStart(HDC hDc);
+void DrawEnd(HDC hDc);
+void DrawPath(HDC hDc);
+
+st_Node* PopMin(std::list<st_Node *> list);

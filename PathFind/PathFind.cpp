@@ -15,8 +15,10 @@ HWND g_hWnd;
 
 BYTE map[MAP_HEIGHT][MAP_WIDTH];
 mapType drawMode;
-std::priority_queue<st_Node> openList;
-std::priority_queue<st_Node> closeList;
+st_Point g_Start;
+st_Point g_End;
+std::list<st_Node *> openList;
+std::list<st_Node *> closeList;
 
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -54,6 +56,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
+
+	g_Start.x = 10;
+	g_Start.y = 20;
+
+	map[g_Start.y][g_Start.x] = start;
+
+	g_End.x = 50;
+	g_End.y = 20;
+
+	map[g_End.y][g_End.x] = end;
+
+
 	g_hWnd = hWnd;
 
 	ShowWindow(hWnd, nCmdShow);
@@ -78,9 +92,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_LBUTTONDBLCLK:
+		{
+			for (auto i = openList.begin(); i != openList.end(); ++i) {
+				delete (*i);
+			}
+
+			for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+				delete (*i);
+			}
+
+			openList.clear();
+			closeList.clear();
+
+			FindPath(g_Start, g_End);
+		}
+		break;
+	case WM_RBUTTONUP:
+		{
+			for (auto i = openList.begin(); i != openList.end(); ++i) {
+				delete (*i);
+			}
+
+			for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+				delete (*i);
+			}
+
+			openList.clear();
+			closeList.clear();
+
+			InvalidateRect(hWnd, NULL, true);
+		}
 	case WM_MOUSEMOVE:
 		{
-			if(wParam != MK_LBUTTON)
+			if (wParam != MK_LBUTTON)
 				return DefWindowProc(hWnd, message, wParam, lParam);
 
 			int xpos = GET_X_LPARAM(lParam) / Length;
@@ -96,10 +141,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (ypos < 0)
 				return DefWindowProc(hWnd, message, wParam, lParam);
 
+		
 			map[ypos][xpos] = drawMode;
+		
+			if (drawMode == start) {
+				map[g_Start.y][g_Start.x] = none;
+				g_Start.x = xpos;
+				g_Start.y = ypos;
+			}
 
+			if (drawMode == end) {
+				map[g_End.y][g_End.x] = none;
+				g_End.x = xpos;
+				g_End.y = ypos;
+			}
+		
 			InvalidateRect(hWnd, NULL, false);
 		}
+		break;
 
 	case WM_KEYDOWN:
 		{
@@ -116,10 +175,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				drawMode = wall;
 				break;
 
+			case 0x34: //4
+				drawMode = start;
+				break;
+
+			case 0x35: //5
+				drawMode = end;
+				break;
+
 			default:
 				return DefWindowProc(hWnd, message, wParam, lParam);
 			}
 		}
+		break;
 
     case WM_COMMAND:
         {
@@ -142,8 +210,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
 
 			DrawMap(hdc);
-			DrawOpenList(hdc);
-			DrawCloseList(hdc);
 
             EndPaint(hWnd, &ps);
         }
@@ -155,6 +221,181 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+BOOL FindPath(st_Point start, st_Point end)
+{
+	NodeMake(start, nullptr);
+
+	st_Node* t;
+
+	while (1) {
+		if (openList.size() == 0)
+			return false;
+
+		t = PopMin(openList);
+
+		for (auto i = openList.begin()++; i != openList.end(); ++i) {
+			if (t->point == (*i)->point) {
+				openList.erase(i);
+				break;
+			}
+		}
+
+		closeList.push_back(t);
+
+		if (NearNodeMake(t))
+			break;
+
+		HDC hdc = GetDC(g_hWnd);
+
+		DrawOpenList(hdc);
+		DrawCloseList(hdc);
+
+		ReleaseDC(g_hWnd, hdc);
+	}
+
+	HDC dc = GetDC(g_hWnd);
+
+	DrawOpenList(dc);
+	DrawCloseList(dc);
+
+	HPEN linePen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+
+	HPEN oldP = (HPEN)SelectObject(dc, linePen);
+
+	t = PopMin(openList);
+
+	MoveToEx(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2, NULL);
+	while (t->pParent != nullptr) {
+		LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+		t = (t->pParent);
+	}
+	LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+
+	DrawStart(dc);
+	DrawEnd(dc);
+
+	SelectObject(dc, oldP);
+
+	DeleteObject(linePen);
+	ReleaseDC(g_hWnd, dc);
+}
+
+BOOL NearNodeMake(st_Node * pNode)
+{
+	st_Point p;
+	p.x = pNode->point.x;
+	p.y = pNode->point.y + 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x;
+	p.y = pNode->point.y - 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x + 1;
+	p.y = pNode->point.y;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x - 1;
+	p.y = pNode->point.y;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x - 1;
+	p.y = pNode->point.y - 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x - 1;
+	p.y = pNode->point.y + 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x + 1;
+	p.y = pNode->point.y + 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	p.x = pNode->point.x + 1;
+	p.y = pNode->point.y - 1;
+	if (NodeMake(p, pNode))
+		return true;
+
+	return false;
+}
+
+BOOL NodeMake(st_Point pPoint, st_Node * pParent)
+{
+	if (pPoint.x < 0 || pPoint.x >= MAP_WIDTH)
+		return false;
+	if (pPoint.y < 0 || pPoint.y >= MAP_HEIGHT)
+		return false;
+
+	if (map[pPoint.y][pPoint.x] == wall)
+		return false;
+
+
+	for (auto i = openList.begin(); i != openList.end(); ++i) {
+		if ((*i)->point == pPoint) {
+			if ((*i)->g > pParent->g + G_Weight) {
+				(*i)->g = pParent->g + G_Weight;
+				(*i)->f = (*i)->g + (*i)->h;
+				(*i)->pParent = pParent;
+
+				return false;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+		if ((*i)->point == pPoint) {
+			if ((*i)->g > pParent->g + G_Weight) {
+				(*i)->g = pParent->g + G_Weight;
+				(*i)->f = (*i)->g + (*i)->h;
+				(*i)->pParent = pParent;
+
+				openList.push_front((*i));
+
+				closeList.erase(i);
+
+				return false;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	st_Node* newNode = new st_Node;
+
+	newNode->point = pPoint;
+	if (pParent == nullptr) {
+		newNode->g = G_Weight;
+	}
+	else {
+		if (map[pPoint.y][pPoint.x] == water) {
+			newNode->g = pParent->g + G_Weight * 1.5;
+		}
+		else {
+			newNode->g = pParent->g + G_Weight;
+		}
+	}
+	newNode->h = abs(pPoint.x - g_End.x)*H_Weight + abs(pPoint.y - g_End.y) * H_Weight;
+	newNode->f = newNode->g + newNode->h;
+	newNode->pParent = pParent;
+
+	openList.push_front(newNode);
+
+	if (newNode->point == g_End)
+		return true;
+	return false;
 }
 
 void DrawMap(HDC hDc)
@@ -244,14 +485,9 @@ void DrawOpenList(HDC hDc)
 	HPEN oldP = (HPEN)SelectObject(hDc, openPen);
 	HBRUSH oldB = (HBRUSH)SelectObject(hDc, openB);
 
-	std::priority_queue<st_Node> tmp = openList;
 
-	for (int i = 0; i < tmp.size(); ++i) {
-		st_Node t = tmp.top();
-
-		Rectangle(hDc, t.point.x * Length, t.point.y*Length, t.point.x*Length + Length, t.point.y*Length + Length);
-
-		tmp.pop();
+	for (auto i = openList.begin(); i != openList.end(); ++i) {
+		Rectangle(hDc, (*i)->point.x * Length, (*i)->point.y*Length, (*i)->point.x*Length + Length, (*i)->point.y*Length + Length);
 	}
 
 	SelectObject(hDc, oldP);
@@ -272,14 +508,8 @@ void DrawCloseList(HDC hDc)
 	HPEN oldP = (HPEN)SelectObject(hDc, closePen);
 	HBRUSH oldB = (HBRUSH)SelectObject(hDc, clodeB);
 
-	std::priority_queue<st_Node> tmp = closeList;
-
-	for (int i = 0; i < tmp.size(); ++i) {
-		st_Node t = tmp.top();
-
-		Rectangle(hDc, t.point.x * Length, t.point.y*Length, t.point.x*Length + Length, t.point.y*Length + Length);
-
-		tmp.pop();
+	for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+		Rectangle(hDc, (*i)->point.x * Length, (*i)->point.y*Length, (*i)->point.x*Length + Length, (*i)->point.y*Length + Length);
 	}
 
 	SelectObject(hDc, oldP);
@@ -290,3 +520,87 @@ void DrawCloseList(HDC hDc)
 
 }
 
+void DrawStart(HDC hDc)
+{
+	HPEN startPen = CreatePen(PS_SOLID, 1, RGB(100, 255, 100));
+	HBRUSH startB = CreateSolidBrush(RGB(100, 255, 100));
+
+
+	HPEN oldP = (HPEN)SelectObject(hDc, startPen);
+	HBRUSH oldBrush = (HBRUSH)SelectObject(hDc, startB);
+
+
+	Rectangle(hDc, g_Start.x*Length, g_Start.y*Length, g_Start.x*Length + Length, g_Start.y*Length + Length);
+
+
+	SelectObject(hDc, oldP);
+	SelectObject(hDc, oldBrush);
+
+	DeleteObject(startPen);
+	DeleteObject(startB);
+}
+
+void DrawEnd(HDC hDc)
+{
+	HPEN endPen = CreatePen(PS_SOLID, 1, RGB(255, 100, 100));
+	HBRUSH endB = CreateSolidBrush(RGB(255, 100, 100));
+
+
+	HPEN oldP = (HPEN)SelectObject(hDc, endPen);
+	HBRUSH oldBrush = (HBRUSH)SelectObject(hDc, endB);
+
+
+	Rectangle(hDc, g_End.x*Length, g_End.y*Length, g_End.x*Length + Length, g_End.y*Length + Length);
+
+	SelectObject(hDc, oldP);
+	SelectObject(hDc, oldBrush);
+
+	DeleteObject(endPen);
+	DeleteObject(endB);
+}
+
+void DrawPath(HDC hDc)
+{
+	st_Node* t = nullptr;
+	for (auto i = openList.begin(); i != openList.end(); ++i) {
+		if ((*i)->point == g_End) {
+			t = (*i);
+			break;
+		}
+	}
+
+	if (t == nullptr)
+		return;
+
+	DrawOpenList(hDc);
+	DrawCloseList(hDc);
+
+	HPEN linePen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+
+	HPEN oldP = (HPEN)SelectObject(hDc, linePen);
+
+	MoveToEx(hDc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2, NULL);
+	while (t->pParent != nullptr) {
+		LineTo(hDc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+		t = (t->pParent);
+	}
+	LineTo(hDc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+
+
+	SelectObject(hDc, oldP);
+
+	DeleteObject(linePen);
+}
+
+st_Node * PopMin(std::list<st_Node*> list)
+{
+
+	auto min = list.begin();
+
+	for (auto i = list.begin(); i != list.end(); ++i) {
+		if ((*min)->f > (*i)->f)
+			min = i;
+	}
+
+	return (*min);
+}

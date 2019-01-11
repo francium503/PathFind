@@ -148,9 +148,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				map[g_Start.y][g_Start.x] = none;
 				g_Start.x = xpos;
 				g_Start.y = ypos;
-			}
-
-			if (drawMode == end) {
+			} else if (drawMode == end) {
 				map[g_End.y][g_End.x] = none;
 				g_End.x = xpos;
 				g_End.y = ypos;
@@ -381,7 +379,7 @@ BOOL NodeMake(st_Point pPoint, st_Node * pParent)
 	}
 	else {
 		if (map[pPoint.y][pPoint.x] == water) {
-			newNode->g = pParent->g + G_Weight * 1.5;
+			newNode->g = pParent->g + G_Weight * WATER_Weight;
 		}
 		else {
 			newNode->g = pParent->g + G_Weight;

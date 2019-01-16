@@ -9,6 +9,7 @@
 
 #define G_Weight 10
 #define H_Weight 10
+#define WATER_Weight 2
 
 enum mapType {
 	none,

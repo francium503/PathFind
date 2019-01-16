@@ -92,21 +92,57 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-	case WM_LBUTTONDBLCLK:
+	case WM_LBUTTONUP:
 		{
-			for (auto i = openList.begin(); i != openList.end(); ++i) {
-				delete (*i);
+
+			if (drawMode == start) {
+				int xpos = GET_X_LPARAM(lParam) / Length;
+				int ypos = GET_Y_LPARAM(lParam) / Length;
+
+				map[ypos][xpos] = drawMode;
+
+				map[g_Start.y][g_Start.x] = none;
+				g_Start.x = xpos;
+				g_Start.y = ypos;
+
+				HDC dc = GetDC(hWnd);
+
+				DrawMap(dc);
+
+				ReleaseDC(hWnd, dc);
+			}
+			else if (drawMode == end) {
+				int xpos = GET_X_LPARAM(lParam) / Length;
+				int ypos = GET_Y_LPARAM(lParam) / Length;
+				map[ypos][xpos] = drawMode;
+
+				map[g_End.y][g_End.x] = none;
+				g_End.x = xpos;
+				g_End.y = ypos;
+
+				HDC dc = GetDC(g_hWnd);
+
+				DrawMap(dc);
+
+				ReleaseDC(hWnd, dc);
 			}
 
-			for (auto i = closeList.begin(); i != closeList.end(); ++i) {
-				delete (*i);
-			}
-
-			openList.clear();
-			closeList.clear();
-
-			FindPath(g_Start, g_End);
 		}
+		break;
+	case WM_LBUTTONDBLCLK:
+		for (auto i = openList.begin(); i != openList.end(); ++i) {
+			delete (*i);
+		}
+
+		for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+			delete (*i);
+		}
+
+		openList.clear();
+		closeList.clear();
+
+		FindPath(g_Start, g_End);
+
 		break;
 	case WM_RBUTTONUP:
 		{
@@ -140,21 +176,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				return DefWindowProc(hWnd, message, wParam, lParam);
 			if (ypos < 0)
 				return DefWindowProc(hWnd, message, wParam, lParam);
-
+			
+			if (drawMode == start)
+				break;
+			else if (drawMode == end)
+				break;
 		
 			map[ypos][xpos] = drawMode;
 		
-			if (drawMode == start) {
-				map[g_Start.y][g_Start.x] = none;
-				g_Start.x = xpos;
-				g_Start.y = ypos;
-			}
-
-			if (drawMode == end) {
-				map[g_End.y][g_End.x] = none;
-				g_End.x = xpos;
-				g_End.y = ypos;
-			}
 		
 			InvalidateRect(hWnd, NULL, false);
 		}
@@ -406,13 +435,13 @@ void DrawMap(HDC hDc)
 
 	nonePen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	noneB = CreateSolidBrush(RGB(255, 255, 255));
-	waterPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 255));
+	waterPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	waterB = CreateSolidBrush(RGB(100, 100, 255));
-	wallPen = CreatePen(PS_SOLID, 1, RGB(80, 80, 80));
+	wallPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	wallB = CreateSolidBrush(RGB(80, 80, 80));
-	startPen = CreatePen(PS_SOLID, 1, RGB(100, 255, 100));
+	startPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	startB = CreateSolidBrush(RGB(100, 255, 100));
-	endPen = CreatePen(PS_SOLID, 1, RGB(255, 100, 100));
+	endPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	endB = CreateSolidBrush(RGB(255, 100, 100));
 
 
@@ -479,7 +508,7 @@ void DrawOpenList(HDC hDc)
 	HPEN openPen;
 	HBRUSH openB;
 
-	openPen = CreatePen(PS_SOLID, 1, RGB(255, 255, 100));
+	openPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	openB = CreateSolidBrush(RGB(255, 255, 100));
 
 	HPEN oldP = (HPEN)SelectObject(hDc, openPen);
@@ -502,7 +531,7 @@ void DrawCloseList(HDC hDc)
 	HPEN closePen;
 	HBRUSH clodeB;
 
-	closePen = CreatePen(PS_SOLID, 1, RGB(100, 255, 255));
+	closePen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	clodeB = CreateSolidBrush(RGB(100, 255, 255));
 
 	HPEN oldP = (HPEN)SelectObject(hDc, closePen);
@@ -522,7 +551,7 @@ void DrawCloseList(HDC hDc)
 
 void DrawStart(HDC hDc)
 {
-	HPEN startPen = CreatePen(PS_SOLID, 1, RGB(100, 255, 100));
+	HPEN startPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	HBRUSH startB = CreateSolidBrush(RGB(100, 255, 100));
 
 
@@ -542,7 +571,7 @@ void DrawStart(HDC hDc)
 
 void DrawEnd(HDC hDc)
 {
-	HPEN endPen = CreatePen(PS_SOLID, 1, RGB(255, 100, 100));
+	HPEN endPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	HBRUSH endB = CreateSolidBrush(RGB(255, 100, 100));
 
 

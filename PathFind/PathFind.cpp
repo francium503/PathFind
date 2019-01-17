@@ -99,6 +99,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				int xpos = GET_X_LPARAM(lParam) / Length;
 				int ypos = GET_Y_LPARAM(lParam) / Length;
 
+				if (xpos >= MAP_WIDTH)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+				if (xpos < 0)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+
+				if (ypos >= MAP_HEIGHT)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+				if (ypos < 0)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+
 				map[ypos][xpos] = drawMode;
 
 				map[g_Start.y][g_Start.x] = none;
@@ -114,6 +124,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			else if (drawMode == end) {
 				int xpos = GET_X_LPARAM(lParam) / Length;
 				int ypos = GET_Y_LPARAM(lParam) / Length;
+
+				if (xpos >= MAP_WIDTH)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+				if (xpos < 0)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+
+				if (ypos >= MAP_HEIGHT)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+				if (ypos < 0)
+					return DefWindowProc(hWnd, message, wParam, lParam);
+
 				map[ypos][xpos] = drawMode;
 
 				map[g_End.y][g_End.x] = none;
@@ -141,7 +162,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		openList.clear();
 		closeList.clear();
 
-		FindPath(g_Start, g_End);
+		//FindPath(g_Start, g_End);
+		JumpPointSearch(g_Start, g_End);
 
 		break;
 	case WM_RBUTTONUP:
@@ -263,7 +285,7 @@ BOOL FindPath(st_Point start, st_Point end)
 
 		t = PopMin(openList);
 
-		for (auto i = openList.begin()++; i != openList.end(); ++i) {
+		for (auto i = openList.begin(); i != openList.end(); ++i) {
 			if (t->point == (*i)->point) {
 				openList.erase(i);
 				break;
@@ -308,6 +330,8 @@ BOOL FindPath(st_Point start, st_Point end)
 
 	DeleteObject(linePen);
 	ReleaseDC(g_hWnd, dc);
+
+	return true;
 }
 
 BOOL NearNodeMake(st_Node * pNode)
@@ -632,3 +656,613 @@ st_Node * PopMin(std::list<st_Node*> list)
 
 	return (*min);
 }
+
+void JumpPointSearch(st_Point start, st_Point end)
+{
+	JPSNodeMake(start, nullptr);
+	
+	st_Node *t;
+
+	while (1) {
+		if (openList.size() == 0)
+			return;
+
+		t = PopMin(openList);
+
+		if (t->point == g_End)
+			break;
+
+		for (auto i = openList.begin(); i != openList.end(); ++i) {
+			if (t->point == (*i)->point) {
+				openList.erase(i);
+				break;
+			}
+		}
+
+		SearchDirection(t);
+
+		closeList.push_back(t);
+
+		HDC hdc = GetDC(g_hWnd);
+
+		DrawOpenList(hdc);
+		DrawCloseList(hdc);
+
+		ReleaseDC(g_hWnd, hdc);
+
+	}
+
+
+	HDC dc = GetDC(g_hWnd);
+
+	DrawOpenList(dc);
+	DrawCloseList(dc);
+
+	HPEN linePen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+
+	HPEN oldP = (HPEN)SelectObject(dc, linePen);
+
+	t = PopMin(openList);
+
+	MoveToEx(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2, NULL);
+	while (t->pParent != nullptr) {
+		LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+		t = (t->pParent);
+	}
+	LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+
+	DrawStart(dc);
+	DrawEnd(dc);
+
+	SelectObject(dc, oldP);
+
+	DeleteObject(linePen);
+	ReleaseDC(g_hWnd, dc);
+
+}
+
+void SearchDirection(st_Node * pNode)
+{
+	if (pNode == nullptr)
+		return;
+
+	if (pNode->pParent == nullptr) {
+		CheckDirection(pNode, LL);
+		CheckDirection(pNode, LD);
+		CheckDirection(pNode, DD);
+		CheckDirection(pNode, RD);
+		CheckDirection(pNode, RR);
+		CheckDirection(pNode, RU);
+		CheckDirection(pNode, UU);
+		CheckDirection(pNode, LU);
+
+		return;
+	}
+
+	st_Point parentPoint = pNode->pParent->point;
+	st_Point myPoint = pNode->point;
+
+	if (myPoint.x < parentPoint.x  && myPoint.y == parentPoint.y) {
+		CheckDirection(pNode, LL);
+
+		if (map[myPoint.y - 1][myPoint.x] == wall) {
+			CheckDirection(pNode, LU);
+		}
+
+		if (map[myPoint.y + 1][myPoint.x] == wall) {
+			CheckDirection(pNode, LD);
+		}
+	}
+	else if (myPoint.x > parentPoint.x  && myPoint.y == parentPoint.y) {
+		CheckDirection(pNode, RR);
+
+		if (map[myPoint.y - 1][myPoint.x] == wall) {
+			CheckDirection(pNode, RU);
+		}
+
+		if (map[myPoint.y + 1][myPoint.x] == wall) {
+			CheckDirection(pNode, RD);
+		}
+	}
+	else if (myPoint.x == parentPoint.x && myPoint.y > parentPoint.y) {
+		CheckDirection(pNode, DD);
+
+		if (map[myPoint.y][myPoint.x + 1] == wall) {
+			CheckDirection(pNode, RD);
+		}
+
+		if (map[myPoint.y][myPoint.x - 1] == wall) {
+			CheckDirection(pNode, LD);
+		}
+	}
+	else if (myPoint.x == parentPoint.x && myPoint.y < parentPoint.y) {
+		CheckDirection(pNode, UU);
+
+		if (map[myPoint.y][myPoint.x + 1] == wall) {
+			CheckDirection(pNode, RU);
+		}
+
+		if (map[myPoint.y][myPoint.x - 1] == wall) {
+			CheckDirection(pNode, LU);
+		}
+	}
+	else if (myPoint.x < parentPoint.x && myPoint.y < parentPoint.y) {
+		CheckDirection(pNode, LU);
+		CheckDirection(pNode, UU);
+		CheckDirection(pNode, LL);
+
+		if (map[myPoint.y][myPoint.x + 1] == wall) {
+			CheckDirection(pNode, RU);
+		}
+		if (map[myPoint.y + 1][myPoint.x] == wall) {
+			CheckDirection(pNode, LD);
+		}
+	}
+	else if (myPoint.x > parentPoint.x && myPoint.y < parentPoint.y) {
+		CheckDirection(pNode, RU);
+		CheckDirection(pNode, UU);
+		CheckDirection(pNode, RR);
+
+		if (map[myPoint.y][myPoint.x - 1] == wall) {
+			CheckDirection(pNode, LU);
+		}
+		if (map[myPoint.y + 1][myPoint.x] == wall) {
+			CheckDirection(pNode, RD);
+		}
+	}
+	else if (myPoint.x < parentPoint.x && myPoint.y > parentPoint.y) {
+		CheckDirection(pNode, LD);
+		CheckDirection(pNode, DD);
+		CheckDirection(pNode, LL);
+
+		if (map[myPoint.y - 1][myPoint.x] == wall) {
+			CheckDirection(pNode, LU);
+		}
+		if (map[myPoint.y][myPoint.x + 1] == wall) {
+			CheckDirection(pNode, RD);
+		}
+	}
+	else if (myPoint.x > parentPoint.x && myPoint.y > parentPoint.y) {
+		CheckDirection(pNode, RD);
+		CheckDirection(pNode, DD);
+		CheckDirection(pNode, RR);
+
+		if (map[myPoint.y - 1][myPoint.x] == wall) {
+			CheckDirection(pNode, RU);
+		}
+		if (map[myPoint.y][myPoint.x - 1] == wall) {
+			CheckDirection(pNode, LD);
+		}
+	}
+}
+
+void CheckDirection(st_Node * pParent, e_Direction eDirection)
+{
+	st_Point myPoint = pParent->point;
+	st_Point *outP = new st_Point;
+
+
+	if (Jump(myPoint, outP, eDirection)) {
+		JPSNodeMake(*outP, pParent);
+	}
+	else {
+		delete outP;
+	}
+}
+
+BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
+{
+	if (point.x < 0 || point.x >= MAP_WIDTH)
+		return false;
+	if (point.y < 0 || point.y >= MAP_HEIGHT)
+		return false; 
+	
+	if (map[point.y][point.x] == wall)
+		return false;
+
+	if (map[point.y][point.x] == end) {
+		outP->x = point.x;
+		outP->y = point.y;
+
+		return true;
+	}
+
+	switch (eDirection) {
+	case LL:
+		while (1) {
+			point.x--;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+
+			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y + 1][point.x] == wall && map[point.y + 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y][point.x - 1] == wall) {
+				return false;
+			}
+
+		}
+
+		break;
+
+	case RR:
+		while (1) {
+			point.x++;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+
+			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y + 1][point.x] == wall && map[point.y + 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y][point.x + 1] == wall) {
+				return false;
+			}
+		}
+
+		break;
+	case UU:
+		while (1) {
+			point.y--;
+
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (map[point.y][point.x - 1] == wall && map[point.y - 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x + 1] == wall && map[point.y - 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y - 1][point.x] == wall) {
+				return false;
+			}
+		}
+
+		break;
+	case DD:
+		while (1) {
+			point.y++;
+
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (map[point.y][point.x - 1] == wall && map[point.y + 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x + 1] == wall && map[point.y + 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y + 1][point.x] == wall) {
+				return false;
+			}
+		}
+
+		break;
+
+	case LD:
+		while (1) {
+			point.x--;
+			point.y++;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (Jump(point, outP, LL)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+			if (Jump(point, outP, DD)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+
+			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x + 1] == wall && map[point.y + 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y + 1][point.x - 1] == wall) {
+				return false;
+			}
+		}
+
+		break;
+
+	case LU:
+		while (1) {
+			point.x--;
+			point.y--;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (Jump(point, outP, LL)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+			if (Jump(point, outP, UU)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+
+			if (map[point.y + 1][point.x] == wall && map[point.y + 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x + 1] == wall && map[point.y - 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y - 1][point.x - 1] == wall) {
+				return false;
+			}
+		}
+
+		break;
+
+	case RU:
+		while (1) {
+			point.x++;
+			point.y--;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (Jump(point, outP, RR)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+			if (Jump(point, outP, UU)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+
+			if (map[point.y + 1][point.x] == wall && map[point.y + 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x - 1] == wall && map[point.y - 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y - 1][point.x + 1] == wall) {
+				return false;
+			}
+		}
+
+		break;
+
+	case RD:
+		while (1) {
+			point.x++;
+			point.y++;
+
+			if (point.x < 0 || point.x >= MAP_WIDTH)
+				return false;
+			if (point.y < 0 || point.y >= MAP_HEIGHT)
+				return false;
+
+			if (Jump(point, outP, RR)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+			if (Jump(point, outP, DD)) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+
+			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x + 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x - 1] == wall && map[point.y + 1][point.x - 1] != wall) {
+				outP->x = point.x;
+				outP->y = point.y;
+				return true;
+			}
+
+			if (map[point.y][point.x] == end) {
+				outP->x = point.x;
+				outP->y = point.y;
+
+				return true;
+			}
+
+			if (map[point.y + 1][point.x + 1] == wall) {
+				return false;
+			}
+		}
+		break;
+	default:
+		return false;
+	}
+
+	return false;
+}
+
+BOOL JPSNodeMake(st_Point pPoint, st_Node * pParent)
+{
+	if (pPoint.x < 0 || pPoint.x >= MAP_WIDTH)
+		return false;
+	if (pPoint.y < 0 || pPoint.y >= MAP_HEIGHT)
+		return false;
+
+	if (map[pPoint.y][pPoint.x] == wall)
+		return false;
+
+
+	for (auto i = openList.begin(); i != openList.end(); ++i) {
+		if ((*i)->point == pPoint) {
+			int realG = pParent->g + (abs(pParent->point.x - pPoint.x) + abs(pParent->point.y - pPoint.y)) * G_Weight;
+
+			if ((*i)->g > realG) {
+				(*i)->g = realG;
+				(*i)->f = (*i)->g + (*i)->h;
+				(*i)->pParent = pParent;
+
+				return false;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	for (auto i = closeList.begin(); i != closeList.end(); ++i) {
+		if ((*i)->point == pPoint) {
+			int realG = pParent->g + (abs(pParent->point.x - pPoint.x) + abs(pParent->point.y - pPoint.y)) * G_Weight;
+
+			if ((*i)->g > realG) {
+				(*i)->g = realG;
+				(*i)->f = (*i)->g + (*i)->h;
+				(*i)->pParent = pParent;
+
+				openList.push_front((*i));
+
+				closeList.erase(i);
+
+				return false;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	st_Node* newNode = new st_Node;
+
+	newNode->point = pPoint;
+	if (pParent == nullptr) {
+		newNode->g = G_Weight;
+	}
+	else {
+		newNode->g = pParent->g + (abs(pParent->point.x - pPoint.x) + abs(pParent->point.y - pPoint.y)) * G_Weight;
+	}
+	newNode->h = abs(pPoint.x - g_End.x)*H_Weight + abs(pPoint.y - g_End.y) * H_Weight;
+	newNode->f = newNode->g + newNode->h;
+	newNode->pParent = pParent;
+
+	openList.push_front(newNode);
+
+	if (newNode->point == g_End)
+		return true;
+
+	return false;
+}
+

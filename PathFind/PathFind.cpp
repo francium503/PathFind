@@ -724,18 +724,20 @@ void JumpPointSearch(st_Point start, st_Point end)
 
 void SearchDirection(st_Node * pNode)
 {
+	COLORREF rgb = RGB(rand() % 155 + 100, rand() % 155 + 100, rand() % 155 + 100);
+
 	if (pNode == nullptr)
 		return;
 
 	if (pNode->pParent == nullptr) {
-		CheckDirection(pNode, LL);
-		CheckDirection(pNode, LD);
-		CheckDirection(pNode, DD);
-		CheckDirection(pNode, RD);
-		CheckDirection(pNode, RR);
-		CheckDirection(pNode, RU);
-		CheckDirection(pNode, UU);
-		CheckDirection(pNode, LU);
+		CheckDirection(pNode, LL, rgb);
+		CheckDirection(pNode, LD, rgb);
+		CheckDirection(pNode, DD, rgb);
+		CheckDirection(pNode, RD, rgb);
+		CheckDirection(pNode, RR, rgb);
+		CheckDirection(pNode, RU, rgb);
+		CheckDirection(pNode, UU, rgb);
+		CheckDirection(pNode, LU, rgb);
 
 		return;
 	}
@@ -744,107 +746,104 @@ void SearchDirection(st_Node * pNode)
 	st_Point myPoint = pNode->point;
 
 	if (myPoint.x < parentPoint.x  && myPoint.y == parentPoint.y) {
-		CheckDirection(pNode, LL);
+		CheckDirection(pNode, LL, rgb);
 
 		if (map[myPoint.y - 1][myPoint.x] == wall) {
-			CheckDirection(pNode, LU);
+			CheckDirection(pNode, LU, rgb);
 		}
 
 		if (map[myPoint.y + 1][myPoint.x] == wall) {
-			CheckDirection(pNode, LD);
+			CheckDirection(pNode, LD, rgb);
 		}
 	}
 	else if (myPoint.x > parentPoint.x  && myPoint.y == parentPoint.y) {
-		CheckDirection(pNode, RR);
+		CheckDirection(pNode, RR, rgb);
 
 		if (map[myPoint.y - 1][myPoint.x] == wall) {
-			CheckDirection(pNode, RU);
+			CheckDirection(pNode, RU, rgb);
 		}
 
 		if (map[myPoint.y + 1][myPoint.x] == wall) {
-			CheckDirection(pNode, RD);
+			CheckDirection(pNode, RD, rgb);
 		}
 	}
 	else if (myPoint.x == parentPoint.x && myPoint.y > parentPoint.y) {
-		CheckDirection(pNode, DD);
+		CheckDirection(pNode, DD, rgb);
 
 		if (map[myPoint.y][myPoint.x + 1] == wall) {
-			CheckDirection(pNode, RD);
+			CheckDirection(pNode, RD, rgb);
 		}
 
 		if (map[myPoint.y][myPoint.x - 1] == wall) {
-			CheckDirection(pNode, LD);
+			CheckDirection(pNode, LD, rgb);
 		}
 	}
 	else if (myPoint.x == parentPoint.x && myPoint.y < parentPoint.y) {
-		CheckDirection(pNode, UU);
+		CheckDirection(pNode, UU, rgb);
 
 		if (map[myPoint.y][myPoint.x + 1] == wall) {
-			CheckDirection(pNode, RU);
+			CheckDirection(pNode, RU, rgb);
 		}
 
 		if (map[myPoint.y][myPoint.x - 1] == wall) {
-			CheckDirection(pNode, LU);
+			CheckDirection(pNode, LU, rgb);
 		}
 	}
 	else if (myPoint.x < parentPoint.x && myPoint.y < parentPoint.y) {
-		CheckDirection(pNode, LU);
-		CheckDirection(pNode, UU);
-		CheckDirection(pNode, LL);
+		CheckDirection(pNode, UU, rgb);
+		CheckDirection(pNode, LL, rgb);
+		CheckDirection(pNode, LU, rgb);
 
 		if (map[myPoint.y][myPoint.x + 1] == wall) {
-			CheckDirection(pNode, RU);
+			CheckDirection(pNode, RU, rgb);
 		}
 		if (map[myPoint.y + 1][myPoint.x] == wall) {
-			CheckDirection(pNode, LD);
+			CheckDirection(pNode, LD, rgb);
 		}
 	}
 	else if (myPoint.x > parentPoint.x && myPoint.y < parentPoint.y) {
-		CheckDirection(pNode, RU);
-		CheckDirection(pNode, UU);
-		CheckDirection(pNode, RR);
+		CheckDirection(pNode, UU, rgb);
+		CheckDirection(pNode, RR, rgb);
+		CheckDirection(pNode, RU, rgb);
 
 		if (map[myPoint.y][myPoint.x - 1] == wall) {
-			CheckDirection(pNode, LU);
+			CheckDirection(pNode, LU, rgb);
 		}
 		if (map[myPoint.y + 1][myPoint.x] == wall) {
-			CheckDirection(pNode, RD);
+			CheckDirection(pNode, RD, rgb);
 		}
 	}
 	else if (myPoint.x < parentPoint.x && myPoint.y > parentPoint.y) {
-		CheckDirection(pNode, LD);
-		CheckDirection(pNode, DD);
-		CheckDirection(pNode, LL);
+		CheckDirection(pNode, DD, rgb);
+		CheckDirection(pNode, LL, rgb);
+		CheckDirection(pNode, LD, rgb);
 
 		if (map[myPoint.y - 1][myPoint.x] == wall) {
-			CheckDirection(pNode, LU);
+			CheckDirection(pNode, LU, rgb);
 		}
 		if (map[myPoint.y][myPoint.x + 1] == wall) {
-			CheckDirection(pNode, RD);
+			CheckDirection(pNode, RD, rgb);
 		}
 	}
 	else if (myPoint.x > parentPoint.x && myPoint.y > parentPoint.y) {
-		CheckDirection(pNode, RD);
-		CheckDirection(pNode, DD);
-		CheckDirection(pNode, RR);
+		CheckDirection(pNode, DD, rgb);
+		CheckDirection(pNode, RR, rgb);
+		CheckDirection(pNode, RD, rgb);
 
 		if (map[myPoint.y - 1][myPoint.x] == wall) {
-			CheckDirection(pNode, RU);
+			CheckDirection(pNode, RU, rgb);
 		}
 		if (map[myPoint.y][myPoint.x - 1] == wall) {
-			CheckDirection(pNode, LD);
+			CheckDirection(pNode, LD, rgb);
 		}
 	}
 }
 
-void CheckDirection(st_Node * pParent, e_Direction eDirection)
+void CheckDirection(st_Node * pParent, e_Direction eDirection, COLORREF rgb)
 {
 	st_Point myPoint = pParent->point;
 	st_Point *outP = new st_Point;
 	
-	COLORREF rgb = RGB(rand() % 155 + 100, rand() % 155 + 100, rand() % 155 + 100);
-
-
 	HDC dc = GetDC(g_hWnd);
 	HBRUSH jumpB = CreateSolidBrush(rgb);
 	HPEN jumpP = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
@@ -891,8 +890,13 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 		while (1) {
 			point.x--;
 
-			if (point.x < 0 || point.x >= MAP_WIDTH) {
+			
 
+			if (point.x < 0 || point.x >= MAP_WIDTH) {
+				return false;
+			}
+			
+			if (map[point.y][point.x] == wall) {
 				return false;
 			}
 
@@ -924,6 +928,7 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 			}
 
 			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
+
 		}
 
 		break;
@@ -934,6 +939,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 
 			if (point.x < 0 || point.x >= MAP_WIDTH)
 				return false;
+
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
 
 			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x + 1] != wall) {
 				outP->x = point.x;
@@ -970,6 +979,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
+
 			if (map[point.y][point.x - 1] == wall && map[point.y - 1][point.x - 1] != wall) {
 				outP->x = point.x;
 				outP->y = point.y;
@@ -1004,6 +1017,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
+
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
 
 			if (map[point.y][point.x - 1] == wall && map[point.y + 1][point.x - 1] != wall) {
 				outP->x = point.x;
@@ -1043,6 +1060,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 				return false;
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
+
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
 
 			if (Jump(point, outP, LL, dc)) {
 				outP->x = point.x;
@@ -1095,6 +1116,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
+
 			if (Jump(point, outP, LL, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
@@ -1146,6 +1171,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
+
 			if (Jump(point, outP, RR, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
@@ -1196,6 +1225,10 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 				return false;
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
+
+			if (map[point.y][point.x] == wall) {
+				return false;
+			}
 
 			if (Jump(point, outP, RR, dc)) {
 				outP->x = point.x;

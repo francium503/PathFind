@@ -690,6 +690,7 @@ void JumpPointSearch(st_Point start, st_Point end)
 
 		ReleaseDC(g_hWnd, hdc);
 
+		Sleep(300);
 	}
 
 
@@ -840,17 +841,34 @@ void CheckDirection(st_Node * pParent, e_Direction eDirection)
 {
 	st_Point myPoint = pParent->point;
 	st_Point *outP = new st_Point;
+	
+	COLORREF rgb = RGB(rand() % 155 + 100, rand() % 155 + 100, rand() % 155 + 100);
 
 
-	if (Jump(myPoint, outP, eDirection)) {
+	HDC dc = GetDC(g_hWnd);
+	HBRUSH jumpB = CreateSolidBrush(rgb);
+	HPEN jumpP = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
+
+	HPEN oldP = (HPEN)SelectObject(dc, jumpP);
+	HBRUSH oldB = (HBRUSH)SelectObject(dc, jumpB);
+
+	if (Jump(myPoint, outP, eDirection, dc)) {
 		JPSNodeMake(*outP, pParent);
 	}
 	else {
 		delete outP;
 	}
+
+	SelectObject(dc, oldP);
+	SelectObject(dc, oldB);
+
+	DeleteObject(jumpB);
+	DeleteObject(jumpP);
+
+	ReleaseDC(g_hWnd, dc);
 }
 
-BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
+BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection, HDC dc)
 {
 	if (point.x < 0 || point.x >= MAP_WIDTH)
 		return false;
@@ -867,23 +885,28 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 		return true;
 	}
 
+
 	switch (eDirection) {
 	case LL:
 		while (1) {
 			point.x--;
 
-			if (point.x < 0 || point.x >= MAP_WIDTH)
+			if (point.x < 0 || point.x >= MAP_WIDTH) {
+
 				return false;
+			}
 
 			if (map[point.y - 1][point.x] == wall && map[point.y - 1][point.x - 1] != wall) {
 				outP->x = point.x;
 				outP->y = point.y;
+
 				return true;
 			}
 
 			if (map[point.y + 1][point.x] == wall && map[point.y + 1][point.x - 1] != wall) {
 				outP->x = point.x;
 				outP->y = point.y;
+
 				return true;
 			}
 
@@ -895,9 +918,12 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y][point.x - 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
+
 				return false;
 			}
 
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -929,8 +955,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y][point.x + 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -961,8 +990,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y - 1][point.x] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -993,8 +1025,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y + 1][point.x] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -1009,12 +1044,12 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
-			if (Jump(point, outP, LL)) {
+			if (Jump(point, outP, LL, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
 			}
-			if (Jump(point, outP, DD)) {
+			if (Jump(point, outP, DD, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
@@ -1041,8 +1076,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y + 1][point.x - 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -1057,12 +1095,12 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
-			if (Jump(point, outP, LL)) {
+			if (Jump(point, outP, LL, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
 			}
-			if (Jump(point, outP, UU)) {
+			if (Jump(point, outP, UU, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
@@ -1089,8 +1127,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y - 1][point.x - 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -1105,12 +1146,12 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
-			if (Jump(point, outP, RR)) {
+			if (Jump(point, outP, RR, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
 			}
-			if (Jump(point, outP, UU)) {
+			if (Jump(point, outP, UU, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
@@ -1137,8 +1178,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y - 1][point.x + 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 
 		break;
@@ -1153,12 +1197,12 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			if (point.y < 0 || point.y >= MAP_HEIGHT)
 				return false;
 
-			if (Jump(point, outP, RR)) {
+			if (Jump(point, outP, RR, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
 			}
-			if (Jump(point, outP, DD)) {
+			if (Jump(point, outP, DD, dc)) {
 				outP->x = point.x;
 				outP->y = point.y;
 				return true;
@@ -1185,8 +1229,11 @@ BOOL Jump(st_Point point, st_Point * outP, e_Direction eDirection)
 			}
 
 			if (map[point.y + 1][point.x + 1] == wall) {
+				Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 				return false;
 			}
+
+			Rectangle(dc, point.x*Length, point.y*Length, point.x*Length + Length, point.y*Length + Length);
 		}
 		break;
 	default:

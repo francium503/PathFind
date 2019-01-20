@@ -69,3 +69,5 @@ void SearchDirection(st_Node *pNode);
 void CheckDirection(st_Node *pParent, e_Direction eDirection, COLORREF rgb);
 BOOL Jump(st_Point point, st_Point *outP, e_Direction eDirection, HDC dc);
 BOOL JPSNodeMake(st_Point pPoint, st_Node *pParent);
+
+BOOL RayPointCheck(st_Point start, st_Point end);

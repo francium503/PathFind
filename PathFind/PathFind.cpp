@@ -183,8 +183,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	case WM_MOUSEMOVE:
 		{
-			if (wParam != MK_LBUTTON)
+			if (wParam != MK_LBUTTON) {
+				st_Point endPoint;
+				endPoint.x = GET_X_LPARAM(lParam) / Length;
+				endPoint.y = GET_Y_LPARAM(lParam) / Length;
+
+				st_Point startPoint;
+				startPoint.x = g_Start.x;
+				startPoint.y = g_Start.y;
+
+				RayPointCheck(startPoint, endPoint);
+
 				return DefWindowProc(hWnd, message, wParam, lParam);
+			}
 
 			int xpos = GET_X_LPARAM(lParam) / Length;
 			int ypos = GET_Y_LPARAM(lParam) / Length;
@@ -712,12 +723,50 @@ void JumpPointSearch(st_Point start, st_Point end)
 	}
 	LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
 
+
+	t = PopMin(openList);
+
+	HPEN shortLinePen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+
+	while (true) {
+		if (t->pParent == nullptr)
+			break;
+
+		while (true) {
+			if (t->pParent->pParent == nullptr)
+				break;
+
+			if (RayPointCheck(t->point, t->pParent->pParent->point)) {
+				t->pParent = t->pParent->pParent;
+			}
+			else {
+				break;
+			}
+		}
+
+		t = t->pParent;
+	}
+
+	linePen = (HPEN)SelectObject(dc, shortLinePen);
+
+	t = PopMin(openList);
+
+	MoveToEx(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2, NULL);
+	while (t->pParent != nullptr) {
+		LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+		t = (t->pParent);
+	}
+	LineTo(dc, t->point.x* Length + Length / 2, t->point.y* Length + Length / 2);
+
+
+
 	DrawStart(dc);
 	DrawEnd(dc);
 
 	SelectObject(dc, oldP);
 
 	DeleteObject(linePen);
+	DeleteObject(shortLinePen);
 	ReleaseDC(g_hWnd, dc);
 
 }
@@ -1344,5 +1393,120 @@ BOOL JPSNodeMake(st_Point pPoint, st_Node * pParent)
 		return true;
 
 	return false;
+}
+
+
+
+BOOL RayPointCheck(st_Point start, st_Point end)
+{
+	//HDC dc = GetDC(g_hWnd);
+
+	int iError = 0;
+	int dx = abs(start.x - end.x);
+	int dy = abs(start.y - end.y);
+
+	st_Point DrawPos = start;
+
+
+	// 선 테스트 코드
+	/*HBRUSH rectB = CreateSolidBrush(RGB(150, 150, 200));
+
+	HBRUSH olbB = (HBRUSH)SelectObject(dc, rectB);
+
+	if (dx >= dy) {
+		for (int i = 0; i < dx; ++i) {
+			iError += dy;
+
+			if (iError > dx/2) {
+				iError -= dx;
+				if (end.y >= start.y)
+					DrawPos.y++;
+				else
+					DrawPos.y--;
+			}
+
+			if (end.x >= start.x)
+				DrawPos.x++;
+			else
+				DrawPos.x--;
+
+			Rectangle(dc, DrawPos.x*Length, DrawPos.y*Length, DrawPos.x*Length + Length, DrawPos.y*Length + Length);
+		}
+
+	}
+	else {
+		for (int i = 0; i < dy; ++i) {
+			iError += dx;
+
+			if (iError > dy/2) {
+				iError -= dy;
+				if (end.x >= start.x)
+					DrawPos.x++;
+				else
+					DrawPos.x--;
+			}
+
+			if (end.y >= start.y)
+				DrawPos.y++;
+			else
+				DrawPos.y--;
+
+			Rectangle(dc, DrawPos.x*Length, DrawPos.y*Length, DrawPos.x*Length + Length, DrawPos.y*Length + Length);
+		}
+	}*/
+
+	if (dx >= dy) {
+		for (int i = 0; i < dx; ++i) {
+			iError += dy;
+
+			if (iError > dx / 2) {
+				iError -= dx;
+				if (end.y >= start.y)
+					DrawPos.y++;
+				else
+					DrawPos.y--;
+			}
+
+			if (end.x >= start.x)
+				DrawPos.x++;
+			else
+				DrawPos.x--;
+			
+			if (map[DrawPos.y][DrawPos.x] == wall)
+				return false;
+		}
+
+	}
+	else {
+		for (int i = 0; i < dy; ++i) {
+			iError += dx;
+
+			if (iError > dy / 2) {
+				iError -= dy;
+				if (end.x >= start.x)
+					DrawPos.x++;
+				else
+					DrawPos.x--;
+			}
+
+			if (end.y >= start.y)
+				DrawPos.y++;
+			else
+				DrawPos.y--;
+
+			if (map[DrawPos.y][DrawPos.x] == wall)
+				return false;
+		}
+	}
+
+	/*MoveToEx(dc, start.x * Length + Length / 2, start.y * Length + Length / 2, NULL);
+	LineTo(dc, end.x * Length + Length / 2, end.y * Length + Length / 2);*/
+
+	/*SelectObject(dc, olbB);
+	DeleteObject(rectB);*/
+
+//	ReleaseDC(g_hWnd, dc);
+
+	return true;
 }
 
